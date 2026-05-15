@@ -11,7 +11,7 @@ fi
 source .env
 
 # Check required environment variables
-required_vars=("N8N_OWNER_EMAIL" "N8N_OWNER_PASSWORD" "N8N_OWNER_FIRST_NAME" "N8N_OWNER_LAST_NAME" "POSTGRES_HOST" "POSTGRES_DB" "POSTGRES_USER" "POSTGRES_PASSWORD" "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY")
+required_vars=("N8N_OWNER_EMAIL" "N8N_OWNER_PASSWORD" "N8N_OWNER_FIRST_NAME" "N8N_OWNER_LAST_NAME")
 for var in "${required_vars[@]}"; do
     if [ -z "${!var}" ]; then
         echo "Error: $var must be set in .env"

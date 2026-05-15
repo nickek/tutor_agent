@@ -34,21 +34,23 @@ if [ "$FRESH_MODE" = true ]; then
     if [ -z "$N8N_ENCRYPTION_KEY" ]; then
         echo "Creating n8n encryption key..."
         export N8N_ENCRYPTION_KEY=$(openssl rand -base64 32)
+        sed -i "s|^N8N_ENCRYPTION_KEY=.*|N8N_ENCRYPTION_KEY=\"$N8N_ENCRYPTION_KEY\"|" .env
     fi
     if [ -z "$WEBUI_SECRET_KEY" ]; then
         echo "Creating open-webui encryption key..."
         export WEBUI_SECRET_KEY=$(openssl rand -base64 32)
+        sed -i "s|^WEBUI_SECRET_KEY=.*|WEBUI_SECRET_KEY=\"$WEBUI_SECRET_KEY\"|" .env
     fi
     
-    docker compose -f docker-compose-dev.yml down -v
+    docker compose -f docker-compose.yml down -v
     sleep 2
 
     echo "Starting Services up..."
-    docker compose -f docker-compose-dev.yml up -d --build
+    docker compose -f docker-compose.yml up -d --build
     sleep 10
 
     echo "Restarting containers..."
-    docker compose -f docker-compose-dev.yml restart
+    docker compose -f docker-compose.yml restart
     sleep 10
 
     source init_n8n.sh
@@ -56,5 +58,5 @@ if [ "$FRESH_MODE" = true ]; then
     docker ps
 
 else
-    docker compose -f docker-compose-dev.yml up -d
+    docker compose -f docker-compose.yml up -d
 fi

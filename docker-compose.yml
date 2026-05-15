@@ -2,12 +2,31 @@ volumes:
   n8n_data:
   ollama_data:
   open_webui_data:
+  postgres_data:
 
 networks:
   demo:
     name: demo
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres-tutor
+    networks: ['demo']
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   n8n:
     build:
       context: apps/n8n
@@ -19,12 +38,22 @@ services:
     env_file:
       - .env
     networks: ['demo']
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       # n8n settings
       - N8N_HOST=${N8N_HOST:-localhost}
       - N8N_PORT=${N8N_PORT:-5678}
       - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      # postgres
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=${POSTGRES_HOST}
+      - DB_POSTGRESDB_PORT=${POSTGRES_PORT:-5432}
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - n8n_data:/home/node/.n8n
     restart: unless-stopped
@@ -38,12 +67,17 @@ services:
     env_file:
       - .env
     networks: ['demo']
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
       - ENABLE_PERSISTENT_CONFIG=${ENABLE_PERSISTENT_CONFIG:-false}
       - ENABLE_FOLLOW_UP_GENERATION=${ENABLE_FOLLOW_UP_GENERATION:-false}
       - ENABLE_TAGS_GENERATION=${ENABLE_TAGS_GENERATION:-false}
       - ENABLE_TITLE_GENERATION=${ENABLE_TITLE_GENERATION:-false}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT:-5432}/${OPENWEB_DB}
     volumes:
       - open_webui_data:/app/backend/data
     restart: unless-stopped

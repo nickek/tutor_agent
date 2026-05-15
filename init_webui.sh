@@ -71,7 +71,7 @@ echo "${FUNCTION_RESPONSE}"
 
 # Enable Merlin function
 echo "Enabling function in database..."
-if ! docker exec -it postgres psql -U myuser -d openwebui -c "UPDATE function SET is_active=true WHERE id='merlin';" 2>/dev/null; then
+if ! docker exec -it postgres psql -U myuser -d openwebui -c "UPDATE function SET is_active=true WHERE id='tutor_agent';" 2>/dev/null; then
     echo "Warning: Failed to enable function in database"
 fi
 
