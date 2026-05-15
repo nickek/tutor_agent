@@ -1,0 +1,46 @@
+volumes:
+  n8n_data:
+  ollama_data:
+  open_webui_data:
+
+networks:
+  demo:
+    name: demo
+
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n
+    ports:
+      - "5678:5678"
+    environment:
+      GENERIC_TIMEZONE: "EST"
+      TZ: "EST"
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      N8N_RUNNERS_ENABLED: "true"
+    networks: ['demo']
+    volumes:
+      - n8n_data:/home/node/.n8n
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    gpus: "all"
+    networks: ['demo']
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+  
+  openui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    networks: ['demo']
+    volumes:
+      - open_webui_data:/app/backend/data
+    ports:
+      - "3000:8080"
+
+
+
