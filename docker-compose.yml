@@ -9,18 +9,43 @@ networks:
 
 services:
   n8n:
-    image: docker.n8n.io/n8nio/n8n
+    build:
+      context: apps/n8n
+    tmpfs:
+      - /tmp
     container_name: n8n
     ports:
-      - "5678:5678"
-    environment:
-      GENERIC_TIMEZONE: "EST"
-      TZ: "EST"
-      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
-      N8N_RUNNERS_ENABLED: "true"
+      - "${N8N_PORT:-5678}:5678"
+    env_file:
+      - .env
     networks: ['demo']
+    environment:
+      # n8n settings
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=${N8N_PORT:-5678}
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
     volumes:
       - n8n_data:/home/node/.n8n
+    restart: unless-stopped
+
+  open-webui:
+    build:
+      context: apps/open-webui
+    container_name: open-webui
+    ports:
+      - "${WEBUI_PORT-:3000}:8080"
+    env_file:
+      - .env
+    networks: ['demo']
+    environment:
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - ENABLE_PERSISTENT_CONFIG=${ENABLE_PERSISTENT_CONFIG:-false}
+      - ENABLE_FOLLOW_UP_GENERATION=${ENABLE_FOLLOW_UP_GENERATION:-false}
+      - ENABLE_TAGS_GENERATION=${ENABLE_TAGS_GENERATION:-false}
+      - ENABLE_TITLE_GENERATION=${ENABLE_TITLE_GENERATION:-false}
+    volumes:
+      - open_webui_data:/app/backend/data
     restart: unless-stopped
 
   ollama:
@@ -32,15 +57,6 @@ services:
       - ollama_data:/root/.ollama
     ports:
       - "11434:11434"
-  
-  openui:
-    image: ghcr.io/open-webui/open-webui:main
-    container_name: open-webui
-    networks: ['demo']
-    volumes:
-      - open_webui_data:/app/backend/data
-    ports:
-      - "3000:8080"
 
 
 

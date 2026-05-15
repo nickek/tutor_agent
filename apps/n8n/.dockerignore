@@ -1,0 +1,51 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Docker
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile
+
+# Documentation
+README.md
+LICENSE
+*.md
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node modules (if any)
+node_modules
+npm-debug.log
+
+# Build artifacts
+dist
+build
+*.log
+
+# Data directories (we don't want local data in image)
+n8n-data/
+n8n-seed/
+ollama-data/
+*-data/
+
+# Backups
+*.backup
+*.bak
+*.tar.gz
+*.zip
