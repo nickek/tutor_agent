@@ -14,11 +14,11 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --up)
-            _MODE=2
+            MODE=2
             shift
             ;;
         --down)
-            _MODE=3
+            MODE=3
             shift
             ;;
         -h|--help)

@@ -1,303 +1,308 @@
-# Local AI Workshop
+# Tutor Agent
 
-This project provides a complete local ai workshop, equipped with local Large Language Model (LLM) setup using Ollama, Open WebUI for a user-friendly interface, and n8n for workflow automation.
-
----
-
-## Overview
-
-This setup includes three main services:
-
-- **Ollama**: Open-source LLM server for running models locally with GPU support
-- **Open WebUI**: User-friendly web interface for interacting with LLMs
-- **n8n**: Workflow automation platform for integrating LLMs into your workflows
-
-All services run in Docker containers with persistent storage and are configured to work together seamlessly.
+An agentic RAG (Retrieval-Augmented Generation) application that turns your Google Drive notes and documents into an interactive AI tutor. Documents are automatically ingested, chunked, and embedded into a Postgres vector database. A Claude-powered agent retrieves relevant content and supports multiple active-learning study modes through a chat interface.
 
 ---
 
-## Requirements
+## Architecture
 
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
-- [Nvidia Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) (for GPU support)
+```
+Google Drive (source folder)
+        │
+        ▼
+    n8n Workflow  ─────────────────────────────────────────────
+    │                                                          │
+    │  Ingestion Pipeline                                      │
+    │  Google Drive → Download → Extract (PDF/Docs/Sheets/    │
+    │  Excel) → Chunk → Embed (nomic-embed-text 768-dim) →    │
+    │  Postgres (pgvector)                                     │
+    │                                                          │
+    │  AI Agent                                                │
+    │  Chat webhook → Claude Sonnet → tools:                   │
+    │    • RAG lookup (vector similarity search)               │
+    │    • List documents (file metadata)                      │
+    │    • Full document retrieval                             │
+    │    • SQL queries on tabular data (document_rows)         │
+    │    • Postgres chat memory (session history)              │
+        │
+        ▼
+   Open WebUI  ←→  User (chat interface on port 3000)
+        │
+   n8n-pipe.py (custom pipe function with streaming + retry)
+```
+
+**Services:**
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| Open WebUI | 3000 | Chat frontend |
+| n8n | 5678 | Workflow orchestrator |
+| Ollama | 11434 | Local embedding model |
+| Postgres | 5432 | Vector store + app databases |
+
+---
+
+## Prerequisites
+
+- [Docker](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/)
+- [Nvidia Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) (GPU required for Ollama)
 - Linux OS
+- An [Anthropic API key](https://console.anthropic.com/)
+- A Google Cloud project with Drive API enabled and OAuth2 credentials (for n8n)
 
 ---
 
 ## Quick Start
 
-### 1. Install Required Dependencies
-
-Install Docker and Docker Compose by following the official documentation for your OS:
-- [Docker Install Guide](https://docs.docker.com/engine/install/)
-- [Docker Compose Install](https://docs.docker.com/compose/install/)
-- [Nvidia Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) (required for GPU acceleration)
-
-### 2. Clone the Project Repository
+### 1. Clone and configure
 
 ```bash
 git clone <your-repo-url>
-cd local_ai_workshop/
+cd tutor_agent
+cp .env.example .env
 ```
 
-**Note**: The `ollama`, `open-webui` and `n8n` volumes are managed by Docker and don't require manual directory creation.
+Edit `.env` and fill in all required values — see [Environment Variables](#environment-variables) below.
 
-### 4. Start All Services
-
-From the project root, run:
+### 2. Start all services
 
 ```bash
-docker compose up -d
+./run_local.sh --fresh
 ```
 
-This command will:
-- Download all required Docker images
-- Create persistent volumes for data storage
-- Start all three services
-- Enable GPU access for Ollama (if available)
+`--fresh` tears down any existing containers and volumes, rebuilds images, starts all services, and runs the initialization scripts that configure n8n and Open WebUI automatically.
 
-### 5. Access the Services
+After `--fresh` completes, services are available at:
+- **Open WebUI**: http://localhost:3000
+- **n8n**: http://localhost:5678
+- **Ollama**: http://localhost:11434
 
-Once started, the services will be available at:
+### 3. Pull the embedding model
 
-- **Open WebUI**: [http://localhost:3000](http://localhost:3000)
-- **Ollama API**: [http://localhost:11434](http://localhost:11434)
-- **n8n**: [http://localhost:5678](http://localhost:5678)
-
-### 6. Stopping the Services
-
-To stop all services:
-
-```bash
-docker compose down
-```
-
-To stop and remove all data (including volumes):
-
-```bash
-docker compose down -v
-```
-
----
-
-## Service Details
-
-### Ollama
-
-Ollama is the core LLM inference engine that runs the language models locally.
-
-**Configuration:**
-- Port: `11434`
-- GPU Access: Enabled (requires Nvidia Container Toolkit)
-- Storage: Docker volume `ollama_data`
-
-**Installing Models:**
-
-See the full [Ollama documentation](https://ollama.com/) for all available models.
-
-Chat model:
-```bash
-docker exec -it ollama ollama pull llama3.1:8b
-```
-
-Code model:
-```bash
-docker exec -it ollama ollama pull qwen2.5-coder:1.5b-base
-```
-
-Embedding model:
 ```bash
 docker exec -it ollama ollama pull nomic-embed-text:latest
 ```
 
-List installed models:
-```bash
-docker exec -it ollama ollama list
-```
+### 4. Set up n8n credentials
 
-**Testing Ollama:**
+In n8n (http://localhost:5678), configure:
+- **Google Drive OAuth2** — used by the Drive trigger and download nodes
+- **Anthropic API** — your API key for Claude
+- **Postgres** — points to the `postgres-tutor` container (host: `postgres`, port: `5432`)
+- **Supabase** — same Postgres instance, used for the vector store nodes
 
-```bash
-curl http://localhost:11434/api/generate -d '{
-  "model": "llama3.1:8b",
-  "prompt": "Hello, world!"
-}'
-```
+### 5. Create the database tables
+
+The workflow includes a one-time setup section. In n8n, open the **Tutor Agent** workflow and manually execute the three setup nodes (labeled **"Run Each Node Once to Set Up Database Tables"**):
+
+1. `Create Documents Table and Match Function` — creates the `documents` table with pgvector and the `match_documents()` similarity search function
+2. `Create Document Metadata Table` — creates the `document_metadata` table
+3. `Create Document Rows Table` — creates the `document_rows` table for tabular data
+
+Run each node once by clicking **Execute Node** on each individually.
+
+### 6. Activate the workflow
+
+Enable the Tutor Agent workflow in n8n. Once active, it listens for:
+- New or updated files in your configured Google Drive folder
+- Chat messages from Open WebUI via webhook
 
 ---
+
+## Environment Variables
+
+Copy `.env.example` to `.env` and fill in the values below.
+
+### n8n
+
+| Variable | Description |
+|----------|-------------|
+| `N8N_PORT` | n8n port (default: `5678`) |
+| `N8N_OWNER_EMAIL` | Admin account email |
+| `N8N_OWNER_FIRST_NAME` | Admin first name |
+| `N8N_OWNER_LAST_NAME` | Admin last name |
+| `N8N_OWNER_PASSWORD` | Admin password |
+| `N8N_ENCRYPTION_KEY` | Auto-generated on `--fresh` start |
 
 ### Open WebUI
 
-Open WebUI provides a user-friendly web interface for interacting with your local LLMs.
+| Variable | Description |
+|----------|-------------|
+| `WEBUI_PORT` | UI port (default: `3000`) |
+| `WEBUI_ADMIN_EMAIL` | Admin account email |
+| `WEBUI_ADMIN_PASSWORD` | Admin password |
+| `WEBUI_SECRET_KEY` | Auto-generated on `--fresh` start |
 
-**Configuration:**
-- Port: `3000` (maps to internal port `8080`)
-- Storage: Local directory `./open-webui` mapped to `/app/backend/data`
+### Postgres
 
-**Features:**
-- Chat interface similar to ChatGPT
-- Support for multiple models
-- Conversation history
-- Model management
-- User authentication
-
-**Documentation:**
-- [Open WebUI GitHub](https://github.com/open-webui/open-webui)
-- [Open WebUI Documentation](https://docs.openwebui.com/)
-
----
-
-### n8n - Workflow Automation
-
-n8n is a powerful workflow automation tool that allows you to create complex workflows and integrate your local LLMs into various automation scenarios.
-
-**Configuration:**
-- Port: `5678`
-- Timezone: EST
-- Storage: Docker volume `n8n_data` (persistent workflows and credentials)
-- Runners: Enabled for executing workflows
-
-**Features:**
-- Visual workflow editor
-- 300+ integrations
-- LLM integration via HTTP requests to Ollama
-- Webhook support
-- Schedule-based automation
-- Data transformation and processing
-
-**Getting Started with n8n:**
-
-1. Access n8n at [http://localhost:5678](http://localhost:5678)
-2. Create an account (data is stored locally)
-3. Create your first workflow
-4. Use the HTTP Request node to connect to Ollama at `http://ollama:11434`
-
-**Example n8n → Ollama Integration:**
-
-In n8n, create an HTTP Request node with:
-- Method: POST
-- URL: `http://ollama:11434/api/generate`
-- Body (JSON):
-  ```json
-  {
-    "model": "llama3.1:8b",
-    "prompt": "Your prompt here",
-    "stream": false
-  }
-  ```
-
-**Documentation:**
-- [n8n Official Documentation](https://docs.n8n.io/)
-- [n8n Community Forum](https://community.n8n.io/)
+| Variable | Description |
+|----------|-------------|
+| `POSTGRES_USER` | Database user |
+| `POSTGRES_PASSWORD` | Database password |
+| `POSTGRES_HOST` | `postgres` (Docker service name) |
+| `POSTGRES_PORT` | `5432` |
 
 ---
 
-## Docker Compose Configuration
+## Workflow Overview
 
-The complete `docker-compose.yml` configuration:
+The n8n workflow (`apps/n8n/workflows/Tutor_Agent.json`) has three logical sections:
 
-```yaml
-services:
-  n8n:
-    image: docker.n8n.io/n8nio/n8n
-    container_name: n8n
-    ports:
-      - "5678:5678"
-    environment:
-      GENERIC_TIMEZONE: "EST"
-      TZ: "EST"
-      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
-      N8N_RUNNERS_ENABLED: "true"
-    volumes:
-      - n8n_data:/home/node/.n8n
-    restart: unless-stopped
+### Ingestion Pipeline (runs automatically on Drive events)
 
-  ollama:
-    image: ollama/ollama
-    container_name: ollama
-    gpus: 'all'
-    volumes:
-      - ollama_data:/root/.ollama
-    ports:
-      - '11434:11434'
+1. Google Drive Trigger detects new or updated files in the configured folder
+2. Files are downloaded and routed by type: PDF, Google Docs, Google Sheets, Excel
+3. Text is extracted and chunked via LangChain's Character Text Splitter
+4. Chunks are embedded with `nomic-embed-text` (768 dimensions) via Ollama
+5. Embeddings are stored in the `documents` Postgres table with file metadata
 
-  openui:
-    image: ghcr.io/open-webui/open-webui:main
-    container_name: open-webui
-    volumes:
-      - ./open-webui:/app/backend/data
-    ports:
-      - 3000:8080
+### AI Agent (runs on each chat message)
 
-volumes:
-  ollama_data:
-  n8n_data:
+The LangChain agent (Claude Sonnet) receives messages from Open WebUI and selects from four tools:
+
+- **RAG lookup** — cosine similarity search over the vector store
+- **List documents** — shows the user what files are available
+- **Get file contents** — fetches the full text of a specific document
+- **Query document rows** — runs SQL against the `document_rows` table for spreadsheet data
+
+Conversation history is persisted per session in Postgres.
+
+### Database Setup (manual, run once)
+
+Three disconnected nodes that create the Postgres schema. Execute each once during initial setup — see Step 5 above.
+
+---
+
+## Google Drive Configuration
+
+The workflow monitors a specific folder by ID. To change the source folder:
+
+1. Open the Tutor Agent workflow in n8n
+2. Edit both Google Drive Trigger nodes (`File Created` and `File Updated`)
+3. Update the **Folder ID** to your target folder
+
+Supported file types: Google Docs, Google Sheets, PDF, Excel (`.xlsx`)
+
+---
+
+## Tutor Agent Study Modes
+
+When chatting in Open WebUI, the agent will ask for your topic and preferred study mode:
+
+| Mode | Description |
+|------|-------------|
+| **Flashcards** | Interactive HTML flashcard widgets with flip animation and progress tracking |
+| **Mock Q&A** | Graded questions with source attribution |
+| **Active Recall** | You explain concepts; the agent probes your understanding |
+| **Feynman Mode** | Teach-back with naive follow-up questions |
+| **Concept Map** | Cross-document synthesis and relationship mapping |
+| **Cloze Deletion** | Fill-in-the-blank from your source material |
+| **Custom** | User-defined study format |
+
+The system prompt is in `agent/tutor-agent-system-prompt.md`.
+
+---
+
+## Database Management
+
+### Reset the database
+
+A standalone Postgres node in the workflow (labeled **"Reset Database"**) drops and recreates the schema. Execute it manually in n8n when you want to clear all ingested documents and start fresh. After resetting, re-run the three setup nodes to recreate the tables.
+
+### Checking ingested documents
+
+Connect to Postgres and query directly:
+
+```bash
+docker exec -it postgres-tutor psql -U <POSTGRES_USER> -d postgres
+```
+
+```sql
+-- List all ingested files
+SELECT title, url, created_at FROM document_metadata;
+
+-- Check vector count
+SELECT COUNT(*) FROM documents;
+```
+
+---
+
+## Run Script Reference
+
+```bash
+./run_local.sh --fresh   # Rebuild everything from scratch (destroys all data)
+./run_local.sh --up      # Start existing containers
+./run_local.sh --down    # Stop containers (data preserved)
 ```
 
 ---
 
 ## Troubleshooting
 
-### General Issues
+**Services won't start**
+- Ensure Docker is running: `docker info`
+- Check ports 3000, 5678, 11434, and 5432 are free
 
-- **Services won't start**: Ensure Docker is running and you have sufficient system resources
-- **Permission Errors**: On Linux/Mac, ensure your user has access to Docker and the mounted directories
-- **Port conflicts**: Make sure ports 3000, 5678, and 11434 are not already in use
+**n8n can't connect to Postgres**
+- Use `postgres` as the host (Docker service name), not `localhost`
+- Verify credentials match your `.env` file
 
-### Ollama Issues
+**Embeddings failing**
+- Confirm `nomic-embed-text:latest` is pulled: `docker exec -it ollama ollama list`
+- Check Ollama logs: `docker compose logs ollama`
 
-- **GPU not detected**: Verify Nvidia Container Toolkit is properly installed
-- **Models not loading**: Check available disk space and memory
-- **Connection refused**: Ensure the Ollama container is running with `docker ps`
+**Google Drive trigger not firing**
+- Verify the OAuth2 credentials are configured and authorized in n8n
+- Confirm the folder ID in both trigger nodes matches your Drive folder
 
-### Open WebUI Issues
+**Chat returns no results**
+- Ensure the workflow is active and database tables exist (Step 5)
+- Check that documents have been ingested: query `document_metadata`
+- Review n8n execution logs for the AI Agent node
 
-- **Can't connect to Ollama**: Make sure Ollama is running and models are installed
-- **Data not persisting**: Verify the `open-webui` directory exists and has proper permissions
-
-### n8n Issues
-
-- **Workflows not saving**: Check that the `n8n_data` volume has sufficient space
-- **Can't connect to Ollama**: Use `http://ollama:11434` (Docker internal network) instead of `localhost`
-- **Timezone issues**: Adjust the `GENERIC_TIMEZONE` and `TZ` environment variables in `docker-compose.yml`
-
-### Checking Logs
-
-View logs for specific services:
+**Viewing logs**
 
 ```bash
-# All services
-docker compose logs
-
-# Specific service
-docker compose logs ollama
-docker compose logs open-webui
-docker compose logs n8n
-
-# Follow logs in real-time
-docker compose logs -f
+docker compose logs -f            # all services
+docker compose logs -f n8n        # n8n only
+docker compose logs -f open-webui # Open WebUI only
+docker compose logs -f ollama     # Ollama only
 ```
 
 ---
 
-## Notes
+## Project Structure
 
-- All data is persisted in Docker volumes or local directories and won't be lost when containers restart
-- The `open-webui` directory stores user data, conversations, and settings
-- Ollama models can be large (several GB each) - ensure sufficient disk space
-- n8n workflows and credentials are stored in the `n8n_data` volume
-- GPU support requires an Nvidia GPU and proper driver installation
+```
+tutor_agent/
+├── docker-compose.yml          # Service definitions
+├── run_local.sh                # Start/stop helper script
+├── .env.example                # Environment variable template
+├── init.sql                    # Creates openwebui and n8n databases
+├── init_n8n.sh                 # Imports and publishes n8n workflow on first run
+├── init_webui.sh               # Installs the n8n pipe function in Open WebUI
+├── agent/
+│   └── tutor-agent-system-prompt.md  # Agent personality and study mode logic
+└── apps/
+    ├── n8n/
+    │   ├── Dockerfile
+    │   └── workflows/
+    │       └── Tutor_Agent.json      # Main RAG + agent workflow
+    └── open-webui/
+        ├── Dockerfile
+        ├── n8n-pipe.py               # Open WebUI → n8n streaming pipe
+        ├── functions/
+        │   └── n8n-pipe.json         # Pipe function config
+        └── tools/
+            └── query_knowledgebase.py
+```
 
 ---
 
-## Additional Resources
+## Resources
 
-- [Ollama Documentation](https://ollama.com/)
-- [Ollama Model Library](https://ollama.com/library)
-- [Open WebUI Documentation](https://docs.openwebui.com/)
-- [Open WebUI GitHub](https://github.com/open-webui/open-webui)
 - [n8n Documentation](https://docs.n8n.io/)
-- [n8n Community](https://community.n8n.io/)
-- [Docker Documentation](https://docs.docker.com/)
-- [Docker Compose Documentation](https://docs.docker.com/compose/)
+- [Open WebUI Documentation](https://docs.openwebui.com/)
+- [Ollama Model Library](https://ollama.com/library)
+- [Anthropic API](https://docs.anthropic.com/)
+- [pgvector](https://github.com/pgvector/pgvector)
