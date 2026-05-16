@@ -4,18 +4,28 @@ set -e
 source .env
 
 # Initialize variables
-FRESH_MODE=false
+MODE=0
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
         --fresh)
-            FRESH_MODE=true
+            MODE=1
+            shift
+            ;;
+        --up)
+            _MODE=2
+            shift
+            ;;
+        --down)
+            _MODE=3
             shift
             ;;
         -h|--help)
             echo "Usage: $0 [--fresh]"
             echo "  --fresh    Run in fresh mode"
+            echo "  --up       Compose up"
+            echo "  --down     Compose down"
             echo "  -h, --help Show this help message"
             exit 0
             ;;
@@ -27,8 +37,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Main script logic
-if [ "$FRESH_MODE" = true ]; then
+# Run in Fresh mode
+if [ $MODE == 1 ]; then
 
     # Generate encryption key if not exists
     if [ -z "$N8N_ENCRYPTION_KEY" ]; then
@@ -57,6 +67,8 @@ if [ "$FRESH_MODE" = true ]; then
     source init_webui.sh
     docker ps
 
-else
+elif [ $MODE == 2 ]; then
     docker compose -f docker-compose.yml up -d
+elif [ $MODE == 3 ]; then
+    docker compose -f docker-compose.yml down
 fi
