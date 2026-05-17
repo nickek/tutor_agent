@@ -52,6 +52,40 @@ if ! docker exec -it n8n sh -c '
     echo "Warning: Some workflows may have failed to import"
 fi
 
+CRED_ID_POSTGRES_CHAT=$(echo -n "postgres-chat-memory" | md5sum | cut -c1-16)
+
+# Create postgres chat memory credential json
+echo "Creating Postgres credential file..."
+if ! docker exec -i n8n sh -c 'cat > /tmp/postgres-credential.json' <<EOF
+[
+  {
+    "id": "${CRED_ID_POSTGRES_CHAT}",
+    "name": "Postgres (Chat Memory)",
+    "type": "postgres",
+    "data": {
+      "host": "${POSTGRES_HOST:-postgres}",
+      "port": ${POSTGRES_PORT:-5432},
+      "database": "${POSTGRES_DB}",
+      "user": "${POSTGRES_USER}",
+      "password": "${POSTGRES_PASSWORD}",
+      "ssl-mode": "${POSTGRES_SSL}"
+    }
+  }
+]
+EOF
+then
+    echo "Error: Failed to create Postgres credential file"
+    exit 1
+fi
+
+echo "Importing Postgres credential..."
+docker exec n8n n8n import:credentials --input=/tmp/postgres-credential.json \
+  && echo "Postgres credential imported successfully!" \
+  || echo "Credential import failed."
+
+# Remove temp credential file
+docker exec n8n rm -f /tmp/postgres-credential.json
+
 docker exec n8n sh -c '
   for wf in /workflows/*.json; do
     [ -f "$wf" ] || continue
