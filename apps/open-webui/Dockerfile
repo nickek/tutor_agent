@@ -9,6 +9,6 @@ COPY functions /functions
 COPY assets /app/backend/static/assets
 
 RUN mkdir /models
-COPY Modelfile /models/
+COPY models /models/
 
 CMD ["bash", "start.sh"]

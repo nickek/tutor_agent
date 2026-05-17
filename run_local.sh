@@ -57,14 +57,10 @@ if [ $MODE == 1 ]; then
 
     echo "Starting Services up..."
     docker compose -f docker-compose.yml up -d --build
-    sleep 10
 
-    echo "Restarting containers..."
-    docker compose -f docker-compose.yml restart
-    sleep 10
-
+    source init_ollama.sh
     source init_n8n.sh
-    source init_webui.sh
+    source init_webui.sh    
     docker ps
 
 elif [ $MODE == 2 ]; then
@@ -72,3 +68,5 @@ elif [ $MODE == 2 ]; then
 elif [ $MODE == 3 ]; then
     docker compose -f docker-compose.yml down
 fi
+
+echo "Setup complete."

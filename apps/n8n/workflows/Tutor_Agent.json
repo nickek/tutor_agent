@@ -88,8 +88,8 @@
       "alwaysOutputData": true,
       "credentials": {
         "googleDriveOAuth2Api": {
-          "id": "YycynlIRrnSngXuJ",
-          "name": "Google Drive account"
+          "id": "a549428260dc0a76",
+          "name": "Google Drive OAuth2"
         }
       }
     },
@@ -121,8 +121,8 @@
       ],
       "credentials": {
         "googleDriveOAuth2Api": {
-          "id": "YycynlIRrnSngXuJ",
-          "name": "Google Drive account"
+          "id": "a549428260dc0a76",
+          "name": "Google Drive OAuth2"
         }
       }
     },
@@ -154,8 +154,8 @@
       ],
       "credentials": {
         "googleDriveOAuth2Api": {
-          "id": "YycynlIRrnSngXuJ",
-          "name": "Google Drive account"
+          "id": "a549428260dc0a76",
+          "name": "Google Drive OAuth2"
         }
       }
     },
@@ -187,8 +187,8 @@
       "notesInFlow": false,
       "credentials": {
         "postgres": {
-          "id": "b2f63S0AfmTJSTF6",
-          "name": "Postgres account"
+          "id": "41c1fa1ce75d08a4",
+          "name": "Postgres (Chat Memory)"
         }
       }
     },
@@ -210,8 +210,8 @@
       "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
-          "id": "saboDJkIIvvO3sfp",
-          "name": "Supabase account"
+          "id": "f764ac0f78267ece",
+          "name": "Supabase"
         }
       }
     },
@@ -520,8 +520,8 @@
       ],
       "credentials": {
         "supabaseApi": {
-          "id": "saboDJkIIvvO3sfp",
-          "name": "Supabase account"
+          "id": "f764ac0f78267ece",
+          "name": "Supabase"
         }
       }
     },
@@ -585,8 +585,8 @@
       "executeOnce": true,
       "credentials": {
         "postgres": {
-          "id": "b2f63S0AfmTJSTF6",
-          "name": "Postgres account"
+          "id": "41c1fa1ce75d08a4",
+          "name": "Postgres (Chat Memory)"
         }
       }
     },
@@ -607,8 +607,8 @@
       "executeOnce": true,
       "credentials": {
         "postgres": {
-          "id": "b2f63S0AfmTJSTF6",
-          "name": "Postgres account"
+          "id": "41c1fa1ce75d08a4",
+          "name": "Postgres (Chat Memory)"
         }
       }
     },
@@ -641,8 +641,8 @@
       "name": "List Documents",
       "credentials": {
         "postgres": {
-          "id": "b2f63S0AfmTJSTF6",
-          "name": "Postgres account"
+          "id": "41c1fa1ce75d08a4",
+          "name": "Postgres (Chat Memory)"
         }
       }
     },
@@ -666,8 +666,8 @@
       "name": "Get File Contents",
       "credentials": {
         "postgres": {
-          "id": "b2f63S0AfmTJSTF6",
-          "name": "Postgres account"
+          "id": "41c1fa1ce75d08a4",
+          "name": "Postgres (Chat Memory)"
         }
       }
     },
@@ -689,8 +689,8 @@
       "name": "Query Document Rows",
       "credentials": {
         "postgres": {
-          "id": "b2f63S0AfmTJSTF6",
-          "name": "Postgres account"
+          "id": "41c1fa1ce75d08a4",
+          "name": "Postgres (Chat Memory)"
         }
       }
     },
@@ -719,8 +719,8 @@
       "name": "Supabase Vector Store1",
       "credentials": {
         "supabaseApi": {
-          "id": "saboDJkIIvvO3sfp",
-          "name": "Supabase account"
+          "id": "f764ac0f78267ece",
+          "name": "Supabase"
         }
       }
     },
@@ -756,8 +756,8 @@
       "executeOnce": true,
       "credentials": {
         "postgres": {
-          "id": "b2f63S0AfmTJSTF6",
-          "name": "Postgres account"
+          "id": "41c1fa1ce75d08a4",
+          "name": "Postgres (Chat Memory)"
         }
       }
     },
@@ -787,8 +787,8 @@
       "executeOnce": true,
       "credentials": {
         "supabaseApi": {
-          "id": "saboDJkIIvvO3sfp",
-          "name": "Supabase account"
+          "id": "f764ac0f78267ece",
+          "name": "Supabase"
         }
       }
     },
@@ -882,8 +882,8 @@
       "executeOnce": true,
       "credentials": {
         "postgres": {
-          "id": "b2f63S0AfmTJSTF6",
-          "name": "Postgres account"
+          "id": "41c1fa1ce75d08a4",
+          "name": "Postgres (Chat Memory)"
         }
       }
     },
@@ -954,8 +954,8 @@
       "name": "Insert Table Rows",
       "credentials": {
         "postgres": {
-          "id": "b2f63S0AfmTJSTF6",
-          "name": "Postgres account"
+          "id": "41c1fa1ce75d08a4",
+          "name": "Postgres (Chat Memory)"
         }
       }
     },
@@ -1048,8 +1048,8 @@
       "name": "Update Schema for Document Metadata",
       "credentials": {
         "postgres": {
-          "id": "b2f63S0AfmTJSTF6",
-          "name": "Postgres account"
+          "id": "41c1fa1ce75d08a4",
+          "name": "Postgres (Chat Memory)"
         }
       }
     },
@@ -1083,8 +1083,8 @@
       "name": "Embeddings Ollama1",
       "credentials": {
         "ollamaApi": {
-          "id": "qO4iuonwX8yhZR0A",
-          "name": "Ollama account"
+          "id": "5bceb88d3437b686",
+          "name": "Ollama"
         }
       }
     },
@@ -1108,8 +1108,8 @@
       "name": "Anthropic Chat Model",
       "credentials": {
         "anthropicApi": {
-          "id": "4lL9XZ5kwLWAGKPL",
-          "name": "Anthropic account"
+          "id": "daceee63180a3d27",
+          "name": "Anthropic"
         }
       }
     },
@@ -1127,8 +1127,8 @@
       "name": "Embeddings Ollama",
       "credentials": {
         "ollamaApi": {
-          "id": "qO4iuonwX8yhZR0A",
-          "name": "Ollama account"
+          "id": "5bceb88d3437b686",
+          "name": "Ollama"
         }
       }
     },
@@ -1225,8 +1225,8 @@
       "name": "Reset Tables in Database",
       "credentials": {
         "postgres": {
-          "id": "b2f63S0AfmTJSTF6",
-          "name": "Postgres account"
+          "id": "41c1fa1ce75d08a4",
+          "name": "Postgres (Chat Memory)"
         }
       }
     },
