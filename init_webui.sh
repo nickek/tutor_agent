@@ -109,7 +109,14 @@ if [ -z "$MODELS_JSON" ]; then
     exit 1
 fi
 
-MODELS_JSON=$(echo "${MODELS_JSON}" | sed "s|assets/Tutor_agent.png|${TUTOR_IMG_DATA_URI}|g")
+TMP_URI=$(mktemp)
+printf '%s' "$TUTOR_IMG_DATA_URI" > "$TMP_URI"
+MODELS_JSON=$(python3 -c "
+import sys
+uri = open(sys.argv[1]).read()
+print(sys.stdin.read().replace('assets/Tutor_agent.png', uri), end='')
+" "$TMP_URI" <<< "$MODELS_JSON")
+rm -f "$TMP_URI"
 
 echo "Importing model details..."
 
